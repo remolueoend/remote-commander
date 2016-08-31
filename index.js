@@ -1,6 +1,6 @@
 const express = require('express'),
       extend = require('extend'),
-      App = require('./App'),
+      App = require('./lib/App'),
       program = require('commander')
         .version('1.0.0')
         .option('-a, --auth_file [path]', 'Path to the passwd authentication file.')
