@@ -7,5 +7,5 @@ module.exports = joi.array().items(joi.object().keys({
   args: joi.object().optional(),
   allowed: joi.array().items(joi.string()),
   denied: joi.array().items(joi.string()),
-  allowed_args: joi.array().items(joi.string())
+  allowed_args: joi.array().items(joi.string()).optional()
 }).xor('allowed', 'denied'));
