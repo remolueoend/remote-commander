@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Remote Commander</title>
+  <meta name="description" content="Allows execution of commands on a remote machine over HTTPS">
+  <meta name="author" content="Remo Zumsteg <remo.zumsteg@ksa.ch>">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="/css/normalize.css">
+  <link rel="stylesheet" href="/css/skeleton.css">
+  <style type="text/css">
+    #banner > div.columns {
+      border: 1px solid #33C3F0;
+      border-radius: 4px;
+      margin-top: 1%;
+      padding: 1%;
+      text-align: center
+    }
+    #banner.err > div.columns {
+      border-color: #f0334c;
+    }
+    #header{
+      text-decoration: none;
+      color: inherit;
+      cursor: pointer;
+    }
+    #header:hover{
+      text-decoration: underline;
+    }
+    #history > table {
+      width: 100%;
+    }
+    #history > table pre {
+      margin: 0;
+    }
+    #history > table td {
+      vertical-align: top;
+    }
+    #history > table tr.err{
+      color: #f70000;
+    }
+    #history > table td:nth-of-type(2){
+      width: 100%;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="banner" class="row <%= (locals.err ? 'err' : '') %>" style="<%= (!locals.msg ? 'display: none' : '') %>">
+      <div class="twelve columns">
+        <%= (locals.msg ? locals.msg : '') %>
+      </div>
+    </div>
+    <div class="row">
+      <div class="twelve columns" style="margin-top: 5%">
+        <h1>Remote Commander</h1>
+        <label for="taskname:">Task Name:</label>
+        <input type="text" id="taskname" />
+        <input type="button" id="execute" value="Execute" class="button-primary" />
+      </div>
+    </div>
+    <div class="row">
+      <div class="twelve columns" id="kills">
+      </div>
+    </div>
+    <div class="row">
+      <div class="twelve columns" id="history">
+        <table></table>
+      </div>
+    </div>
+  </div>
+  <script type="text/javascript" src="/socket.io/socket.io.js"></script>
+  <script type="text/javascript">
+    function getHash () {
+      var hash = window.location.hash;
+      return hash ? hash.substring(1) : void 0;
+    }
+
+    function $ (s) {
+      return document.querySelector(s);
+    }
+
+    function addMsg(task, msg, err) {
+      var row = document.createElement('tr'),
+          name = document.createElement('td'),
+          text = document.createElement('td');
+      if(err) row.classList.add('err');
+      name.innerHTML = '<pre>' + task + '</pre>';
+      text.innerHTML = '<pre>' + msg + '</pre>';
+      row.appendChild(name);
+      row.appendChild(text);
+      $('#history > table').appendChild(row);
+    }
+
+    function addKillButton(id, name) {
+      var button = document.createElement('input');
+      button.setAttribute('type', 'button');
+      button.setAttribute('data-id', id);
+      button.value = 'Kill ' + name;
+      button.style.backgroundColor = '#f0334c';
+      button.style.borderColor = '#f0334c';
+      button.style.marginRight = '10px';
+      button.classList.add('button-primary');
+      button.addEventListener('click', function () {
+        kill(id, name);
+      });
+      $('#kills').appendChild(button);
+    }
+
+    function kill(cmdid, name) {
+      addMsg(name, 'Trying to kill process...');
+      var req = new XMLHttpRequest();
+      req.open('post', '/kill/' + cmdid);
+      req.onload = function (e) {
+        if(req.status !== 200) {
+          addMsg(name, 'Killing process failed: ' + req.responseText, true);
+        }
+      };
+      req.send();
+    }
+
+    var hash = getHash(),
+        taskName = $('#taskname');
+    !hash || (taskName.value = hash);
+    
+    $('#execute').addEventListener('click', function () {
+      var tn = taskName.value;
+      //$('#history > table').innerHTML = '';
+      var req = new XMLHttpRequest();
+      req.open('post', '/execute/' + tn);
+      req.onload = function (e) {
+        if(req.status === 200) {
+          addMsg(tn, 'Command started.');
+          addKillButton(req.responseText, tn);
+        } else {
+          addMsg(tn, req.responseText, true);
+        }
+      };
+      req.send();
+      taskName.value = '';
+    });
+
+    var socket = io.connect('/');
+    socket.on('stdo', function (data) {
+      addMsg(data.name, data.message, data.err);
+    });
+    socket.on('running', function (data) {
+      data.forEach(function (i) {
+        addKillButton(i.id, i.name);
+      });
+    });
+    socket.on('exit', function (data) {
+      var kb = $('input[data-id="' + data.id + '"]');
+      $('#kills').removeChild(kb);
+    });
+  </script>
+</body>
+</html>

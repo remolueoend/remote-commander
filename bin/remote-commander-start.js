@@ -7,6 +7,8 @@ const express = require('express'),
       .description('starts a listener for incoming requests on the given port.')
         .option('-a, --auth-file [./users.passwd]', 'Path to the passwd authentication file.', './users.htpasswd')
         .option('-c, --command-file [./commands.json]', 'Path to the command definition file.', 'commands.json')
+        .option('-k, --key-file [./key.pem]', 'Path to the private key file.', 'key.pem')
+        .option('-s, --cert-file [./csr.pem]', 'Path to the x509 certificate file.', 'csr.pem')
         .option('-p, --port [8090]', 'Optional port number', 8090, parseInt)
         .option('-b, --basic', 'Use basic auth instead of digest auth.')
         .option('-l, --log-dir [path]', 'Path to the log directory.')
